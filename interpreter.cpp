@@ -1,109 +1,147 @@
-#include <string>
+include <string>
 #include <vector>
 #include <iostream>
 #include "lexem.h"
 using namespace std;
+#include <stack>
 
-vector <Lexem *> parseLexem(string codeline);
-vector <Lexem *> buildPoliz(vector <Lexem *> infix );
-int evaluatePoliz(vector <Lexem *> poliz );
+vector <Lexem *> parseLexem(const string &codeline);
 int evaluatePostfix(vector <Lexem *> postfix);
 vector <Lexem *> buildPostfix(vector <Lexem *> infix); 
 bool isOperator(Lexem *object);
 
-vector <Lexem *> parseLexem(string codeline) {
-    int number = 0;
-    Lexem *lex;
-    bool numberFlag = false;
-    vector <Lexem *> parsed;
-    for(int i = 0; i < codeline.size(); ++i) {
-        if(codeline[i] >= '0' && codeline[i] <= '9') {
-            number = number * 10 + codeline[i] - '0';
-            numberFlag = true;              
-        } else {
-            if(numberFlag) {
-                lex = new Number(number);
-                parsed.push_back(lex);    
-            }
-            number = 0;
-            numberFlag = false;
-            lex = new Operators(codeline[i]);
-            parsed.push_back(lex);
+Lexem *get_oper(string codeline, int &pos) {
+    string subcodeline;
+    for(int op = 20; op >= 0; --op) {
+        subcodeline = codeline.substr(pos, OPERTEXT[op].size());
+        if(OPERTEXT[op] == subcodeline) {
+            pos += OPERTEXT[op].size();
+            return new Operators(op);
         }
     }
-    if(numberFlag) {
-        lex = new Number(number);
-        parsed.push_back(lex);
-    }  
-    cout << "parsedsize: " << parsed.size() << endl;
-    return  parsed;
+    return nullptr;
 }
-int evaluatePostfix(vector <Lexem *> postfix) {
-    Lexem *result; 
-    int i = 0;
-    while(postfix.size() != 1) {
-        if(postfix[i]->isOperator() == true) {
-            result = new Number(postfix[i]->getValue(Number(postfix[i - 2]->getValue()),
-            Number(postfix[i - 1]->getValue())));
-            delete postfix[i];
-            delete postfix[i - 1];
-            delete postfix[i - 2];
-            postfix.erase(postfix.begin() + i);
-            postfix.erase(postfix.begin() + (i - 1));
-            postfix.erase(postfix.begin() + (i - 2));
-            i -= 2;
-            postfix.insert(postfix.begin() + i, result);
-        } else {
-            i++;
+Lexem *get_num(string codeline, int &pos) {
+    int number = 0;
+    int old_pos = pos;
+    while(codeline[pos] >= '0' && codeline[pos] <= '9') {
+        number = number * 10 + codeline[pos] - '0';
+        pos++;
+    }
+    if (pos == old_pos) {
+        return nullptr;
+    }
+    return new Number(number);
+}
+Lexem *scan_var(string codeline, int &pos) {
+    string name;
+    int old_pos = pos;
+    Variable *ptr;
+    while((codeline[pos] >= 'a' && codeline[pos] <= 'z') || (codeline[pos] >= 'A' && codeline[pos] <= 'Z') || 
+          (codeline[pos] >= '0' && codeline[pos] <= '9') || codeline[pos] == '_') 
+    {
+        name.push_back(codeline[pos]);
+        pos++;
+    }
+    if(pos == old_pos) {
+        return nullptr;
+    }
+    auto search = varTable.find(name);
+    if (search == varTable.end()) {
+        ptr = new Variable(name);
+        varTable.insert(make_pair(name, ptr));
+        return ptr;
+    } else {
+        return search->second;
+    }
+}
+
+vector <Lexem *> parseLexem(const string &codeline) {
+    Lexem *lexem;
+    vector <Lexem *> parsed;
+    for(int pos = 0; pos < codeline.size();) {
+        lexem = get_oper(codeline, pos);
+        if(lexem != nullptr) {    
+            parsed.push_back(lexem);
+            continue;
+        }
+        lexem = get_num(codeline, pos);
+        if(lexem != nullptr) {
+            parsed.push_back(lexem);
+            continue;
+        }
+        lexem = scan_var(codeline, pos);
+        if(lexem != nullptr) {
+            parsed.push_back(lexem);
+            continue;
         }
     }
-    cout << postfix[0]->getValue() << endl;
-    return postfix[0]->getValue();
+    return parsed;
+}
+
+int evaluatePostfix(vector <Lexem *> postfix) {
+    int result = 0;
+    Lexem *left, *right;
+    stack <Lexem *> evaluationStack;
+    for(int i = 0; i < postfix.size(); ++i) {
+        if(!postfix[i]->isOperator()) {
+            evaluationStack.push(postfix[i]);
+        } else {
+            right = evaluationStack.top();
+            evaluationStack.pop();
+            left = evaluationStack.top();
+            evaluationStack.pop();
+            result = postfix[i]->getValue(left, right);
+            evaluationStack.push(new Number(result));
+        }
+    }
+    return evaluationStack.top()->getValue();
 }
 
 vector <Lexem *> buildPostfix(vector <Lexem *> infix) {
     vector <Lexem *> postfix_;
     vector <Lexem *> stackOfOperators;
-    int n = 0;
-    int infix_size = 0;
     int priority = 0;
-    infix_size = infix.size();
-    cout << infix_size << endl;
     for(int i = 0; i < infix.size(); ++i) {
-        if(infix[i]->isOperator() == true) { 
-            stackOfOperators.push_back(infix[i]);
-            
-            priority = stackOfOperators.back()->getPriority();
-
+        if(infix[i]->isOperator()) {
+            if(infix[i]->getType() == RBRACKET) {
+                while(!stackOfOperators.empty() && (stackOfOperators.back()->getType() != LBRACKET)) {    
+                    postfix_.push_back(stackOfOperators.back()); 
+                    stackOfOperators.pop_back();                
+                }   
+                stackOfOperators.pop_back();
+            } else {
+                priority = infix[i]->getPriority();
+                while((priority != -1) && !stackOfOperators.empty() && (stackOfOperators.back()->getPriority() >= priority)) {
+                    postfix_.push_back(stackOfOperators.back());
+                    stackOfOperators.pop_back();
+                }
+                stackOfOperators.push_back(infix[i]);
+            }
         } else {
             postfix_.push_back(infix[i]);
         }
-        if(infix[i]->getType() == RBRACKET) {
-            stackOfOperators.pop_back();
-            while(stackOfOperators[stackOfOperators.size() - 1]->getType() != LBRACKET) {    
-                postfix_.push_back(stackOfOperators.back()); 
-                stackOfOperators.pop_back();                
-            }   
-            stackOfOperators.pop_back();
-        }
     }
-    while(stackOfOperators.empty() != true) {
+    while(!stackOfOperators.empty()) {
         postfix_.push_back(stackOfOperators.back());
         stackOfOperators.pop_back();
     }
     return postfix_;
 }
 
- int main () {
+int main () {
     string codeline;
     vector <Lexem *> infix;
     vector <Lexem *> postfix;
-    int value = 0;
+    int ans = 0;
     cin >> codeline;
+    while(codeline != "exit") {
         infix = parseLexem(codeline);
         postfix = buildPostfix(infix);
-        value = evaluatePostfix(postfix);
-        cout << value << endl ;
+        ans = evaluatePostfix(postfix);
+        cout << ans << endl ;
+        cin >> codeline;
+    }
 
     return 0;
 }
