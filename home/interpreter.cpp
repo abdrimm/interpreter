@@ -37,8 +37,7 @@ Lexem *scan_var(string codeline, int &pos) {
     string name;
     int old_pos = pos;
     Variable *ptr;
-    while((codeline[pos] >= 'a' && codeline[pos] <= 'z') || (codeline[pos] >= 'A' && codeline[pos] <= 'Z') || 
-          (codeline[pos] >= '0' && codeline[pos] <= '9') || codeline[pos] == '_') 
+    while(isalpha(codeline[pos]) || isdigit(codeline[pos]) || codeline[pos] == '_') 
     {
         name.push_back(codeline[pos]);
         pos++;
