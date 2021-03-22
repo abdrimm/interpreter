@@ -83,16 +83,18 @@ class Number : public Lexem {
         virtual int getValue() const;
         virtual void print();
 };
+
 Number::Number(int value) {
     this->value = value;
 }
+
 int Number::getValue() const {
     return value;
 }
+
 void Number::print() {
     cout << value;
 }
-
 
 class Operators : public Lexem {
     OPERATOR opertype;
@@ -106,6 +108,7 @@ class Operators : public Lexem {
         virtual int getValue(Lexem *left, Lexem *right);
         virtual void print();
 };
+
 Operators::Operators() {}
 OPERATOR Operators::getType() {
     return opertype;
@@ -113,18 +116,21 @@ OPERATOR Operators::getType() {
 Operators::Operators(int idx) {
     opertype = (OPERATOR)idx;
 }
+
 void Operators::print() {
     cout << OPERTEXT[(int)getType()];
 }
+
 int Operators::getPriority() {
-    int priority = 0;
+    int importance = 0;
     for(int i = 0; i < sizeof(OPERTEXT); ++i) {
         if(getType() == i) {
-            priority = PRIORITY[i]; 
+            importance = PRIORITY[i]; 
         }
     }
-    return priority;
+    return importance;
 }
+
 int Operators::getValue(Lexem *left, Lexem *right) {  
     if(opertype == PLUS) {
         return left->getValue() + right->getValue();
@@ -192,19 +198,24 @@ class Variable : public Lexem {
         virtual int getValue() const;
         virtual void setValue(int value);
 };
+
 Variable::Variable() {
     name = nullptr;
 }
+
 Variable::Variable(string name) {
     value = 0;
     this->name = name;
 }
+
 void Variable::setValue(int value) {
     this->value = value;
 }
+
 int Variable::getValue() const {
     return value;
 }
+
 void Variable::print() {
     cout << name << "[" << value << "]";
 }
