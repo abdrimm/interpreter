@@ -9,11 +9,15 @@ class Lexem;
 class Number;
 class Operators;
 class Variable;
-
-map <string, Variable*> varTable;
-
+class Goto;
+map <string, Variable *> var_table;
+map <string, int> label_table;
 
 enum OPERATOR {
+    IF, THEN,
+    ELSE, ENDIF,
+    WHILE, ENDWHILE,
+    GOTO, COLON,
     LBRACKET, RBRACKET,
     ASSIGN,
     OR,
@@ -29,7 +33,11 @@ enum OPERATOR {
     MULTIPLY, DIV, MOD
 };
 
-string OPERTEXT[] = {
+string OPERTEXT [] = {
+    "if", "then",
+    "else", "endif",
+    "while", "endwhile",
+    "goto", ":",
     "(", ")",
     "=",
     "or",
@@ -44,9 +52,12 @@ string OPERTEXT[] = {
     "+", "-",
     "*", "/", "%"
 };
-
-int PRIORITY [] = {
-    -1 , -1 ,
+ int PRIORITY [] = {
+    -3, -3,
+    -3, -3,
+    -3, -3,   
+    -2, -2,
+    -1, -1,
     0,
     1,
     2,
@@ -60,40 +71,42 @@ int PRIORITY [] = {
     9, 9,
     10, 10, 10
 };
+
 class Lexem {
     public :
         Lexem();
-        virtual OPERATOR getType() {};
-        virtual bool isOperator() {return false;};
-        virtual int getValue() const {};
-        virtual int getValue(Lexem *left, Lexem *right) {};
-        virtual int getPriority() {};
-        virtual void setValue(int value) {};
+        virtual OPERATOR get_type() {};
+        virtual bool is_operator() {return false;};
+        virtual bool is_variable() {return false;};
+        virtual string get_name() {};
+        virtual int get_value() const {};
+        virtual int get_value(Lexem *left, Lexem *right) {};
+        virtual int get_priority() {};
+        virtual void set_value(int value) {};
         virtual void print() {}; 
 };
-Lexem::Lexem() {
-    
+
+Lexem::Lexem() {  
 }
+
 class Number : public Lexem {
     int value;
     public :
         Number();
         Number(int value);
-        virtual bool isOperator() {return false;};
-        virtual int getValue() const;
-        virtual void print();
+        bool is_operator() {return false;};
+        int get_value() const;
+        void print();
 };
 
 Number::Number(int value) {
     this->value = value;
 }
-
-int Number::getValue() const {
+int Number::get_value() const {
     return value;
 }
-
 void Number::print() {
-    cout << value;
+    cout << value << " ";
 }
 
 class Operators : public Lexem {
@@ -101,88 +114,87 @@ class Operators : public Lexem {
     public :
         Operators();
         Operators(int idx);
-        virtual bool isOperator() {return true;};
         Operators(vector <Lexem *> vec);
-        virtual OPERATOR getType();
-        virtual int getPriority();
-        virtual int getValue(Lexem *left, Lexem *right);
-        virtual void print();
+        OPERATOR get_type();
+        bool is_operator() {return true;};
+        bool is_variable() {return false;};
+        int get_priority();
+        int get_value(Lexem *left, Lexem *right);
+        void print();
 };
 
 Operators::Operators() {}
-OPERATOR Operators::getType() {
+
+OPERATOR Operators::get_type() {
     return opertype;
 }
 Operators::Operators(int idx) {
     opertype = (OPERATOR)idx;
 }
-
 void Operators::print() {
-    cout << OPERTEXT[(int)getType()];
+    cout << OPERTEXT[(int)get_type()];
 }
-
-int Operators::getPriority() {
-    int importance = 0;
+int Operators::get_priority() {
+    int priority = 0;
     for(int i = 0; i < sizeof(OPERTEXT); ++i) {
-        if(getType() == i) {
-            importance = PRIORITY[i]; 
+        if(get_type() == i) {
+            priority = PRIORITY[i]; 
         }
     }
-    return importance;
+    return priority;
 }
-
-int Operators::getValue(Lexem *left, Lexem *right) {  
+int Operators::get_value(Lexem *left, Lexem *right) {  
     if(opertype == PLUS) {
-        return left->getValue() + right->getValue();
+        return left->get_value() + right->get_value();
     }
     if(opertype == MINUS) {
-        return left->getValue() - right->getValue();
+        return left->get_value() - right->get_value();
     }
     if(opertype == MULTIPLY) {
-        return left->getValue() * right->getValue();
+        return left->get_value() * right->get_value();
     }
     if(opertype == DIV) {
-        return left->getValue() / right->getValue();
+        return left->get_value() / right->get_value();
     }
     if(opertype == MOD) {
-        return left->getValue() % right->getValue();
+        return left->get_value() % right->get_value();
     }
     if(opertype == AND) {
-        return left->getValue() & right->getValue();
+        return left->get_value() & right->get_value();
     }
     if(opertype == OR) {
-        return left->getValue() || right->getValue();
+        return left->get_value() || right->get_value();
     }
     if(opertype == BITOR) {
-        return left->getValue() | right->getValue();
+        return left->get_value() | right->get_value();
     }
     if(opertype == XOR) {
-        return left->getValue() ^ right->getValue();
+        return left->get_value() ^ right->get_value();
     }
     if(opertype == BITAND) {
-        return left->getValue() & right->getValue();
+        return left->get_value() & right->get_value();
     }
     if(opertype == EQ) {
-        return left->getValue() == right->getValue();
+        return left->get_value() == right->get_value();
     }
     if(opertype == NEQ) {
-        return left->getValue() != right->getValue();
+        return left->get_value() != right->get_value();
     }
     if(opertype == LEQ) {
-        return left->getValue() <= right->getValue();
+        return left->get_value() <= right->get_value();
     }
     if(opertype == LT) {
-        return left->getValue() < right->getValue();
+        return left->get_value() < right->get_value();
     }
     if(opertype == GEQ) {
-       return left->getValue() >= right->getValue();
+       return left->get_value() >= right->get_value();
     }
     if(opertype == GT) {
-        return left->getValue() > right->getValue();
+        return left->get_value() > right->get_value();
     }
     if(opertype == ASSIGN) {
-        int val = right->getValue();
-        left->setValue(val);
+        int val = right->get_value();
+        left->set_value(val);
         return val;
     }
 }
@@ -193,31 +205,62 @@ class Variable : public Lexem {
     public:
         Variable();
         Variable(string name);
-        virtual bool isOperator() {return false;};
-        virtual void print();
-        virtual int getValue() const;
-        virtual void setValue(int value);
+        bool is_operator() {return false;};
+        bool is_variable() {return true;};
+        void print();
+        int get_value() const;
+        void set_value(int value);
+        string get_name();
+        bool in_labeltable();
 };
 
+string Variable::get_name() {
+    return this->name;
+}
 Variable::Variable() {
     name = nullptr;
 }
-
 Variable::Variable(string name) {
     value = 0;
     this->name = name;
 }
-
-void Variable::setValue(int value) {
+void Variable::set_value(int value) {
     this->value = value;
 }
-
-int Variable::getValue() const {
+int Variable::get_value() const {
     return value;
 }
-
 void Variable::print() {
-    cout << name << "[" << value << "]";
+    cout << name;
 }
+bool Variable::in_labeltable() {  
+    if(label_table.find(this->get_name()) == label_table.end()) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+class Goto : public Operators {
+    int rank;
+public:
+    bool is_variable() {return false;};
+    bool is_operator() {return true;};
+    enum { UNDEFINED = - INT32_MAX };
+    Goto(OPERATOR optype): Operators(optype) {
+        rank = UNDEFINED;
+    }
+    Goto(int op = 0): Operators(op) {};
+    void set_rank(int rank) {
+        Goto :: rank = rank;
+    }
+    int get_rank(){
+        return rank;
+    }
+    void print() {
+        cout << " [ < rank " << rank << ">" << OPERTEXT[(int)get_type()] << " ] " << endl;
+    }
+};
+
 
 #endif
