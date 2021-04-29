@@ -13,20 +13,28 @@ class Operators;
 class Variable;
 class Goto;
 class Array;
-extern map <string, Variable *> var_table;
+
+struct function {
+    int arg_num;
+    int row;
+};
+
+extern map <string, int> var_table;
 extern map <string, int> lable_table;
-extern map <string, int *> array_table;
+extern map <string, int* > array_table;
+extern map <string, function> fun_table;
+extern stack <int> program_stack;
 
 class Lexem {
 public:
     Lexem();
-    virtual OPERATOR get_type() {};
+    virtual OPERATOR get_type() {return RETURN;};
     virtual bool is_operator() {return false;};
     virtual bool is_variable() {return false;};
-    virtual string get_name() {};
-    virtual int get_value() const {};
-    virtual int get_value(Lexem *left, Lexem *right) {};
-    virtual int get_priority() {};
+    virtual string get_name() {return "";};
+    virtual int get_value() const {return 0;};
+    virtual int get_value(Lexem* left, Lexem* right) {return 0;};
+    virtual int get_priority() {return 0;};
     virtual void set_value(int value) {};
     virtual void print() {}; 
 };
@@ -57,17 +65,16 @@ public:
 
 class Variable : public Lexem {
     string name;
-    int value;
-    public:
-        Variable();
-        Variable(string name);
-        bool is_operator() {return false;};
-        bool is_variable() {return true;};
-        void print();
-        int get_value() const;
-        void set_value(int value);
-        string get_name();
-        bool inlabel_table();
+public:
+    Variable();
+    Variable(string name);
+    bool is_operator() {return false;};
+    bool is_variable() {return true;};
+    void print();
+    int get_value() const;
+    void set_value(int value);
+    string get_name();
+    bool inlabel_table();
 };
 
 
@@ -81,15 +88,16 @@ public:
     Goto(int op = 0): Operators(op) {};
     void set_row(int row) { Goto :: row = row; }
     int get_row(){ return row; }
-    void print() { cout << " [ < row " << row << ">" << OPERTEXT[(int)get_type()] << " ] " << endl; }
+    void print() { cout << " [ < row " << row << ">" << OPERTEXT[(int)get_type()] << " ] "; }
 };
+
 class Array: public Lexem {
     string array_name;
-    int el_number;
-    int value;
+    int element_number;
 public:
     Array(Lexem *left, Lexem *right);
     void set_value(int number);
+    int get_value() const;
 };
 
 #endif

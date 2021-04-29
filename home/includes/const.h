@@ -1,8 +1,13 @@
 #ifndef CONST_H
 #define CONST_H
 #include <string>
+
 using namespace std;
+
 enum OPERATOR {
+    COMMA,
+    RETURN,
+    FUNCTION, ENDFUNCTION,
     LSQRBRACKET, RSQRBRACKET, SIZE,
     IF, THEN,
     ELSE, ENDIF,
