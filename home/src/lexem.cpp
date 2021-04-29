@@ -1,19 +1,22 @@
 #include "lexem.h"
 #include "const.h"
 
+map <string, int> var_table;
+map <string, int> lable_table;
+map <string, int* > array_table;
+map <string, function> fun_table;
+stack <int> program_stack;
 Lexem::Lexem() {  
 }
-
 
 Number::Number(int value) { this->value = value; }
 int Number::get_value() const { return value; }
 void Number::print() { cout << value << " "; }
-
-
 Operators::Operators() {}
 OPERATOR Operators::get_type() { return opertype; }
 Operators::Operators(int idx) { opertype = (OPERATOR)idx; }
 void Operators::print() { cout << OPERTEXT[(int)get_type()]; }
+
 int Operators::get_priority() {
     int priority = 0;
     for(int i = 0; i < OPER_LEN; ++i) {
@@ -23,6 +26,7 @@ int Operators::get_priority() {
     }
     return priority;
 }
+
 int Operators::get_value(Lexem *left, Lexem *right) {  
     if(opertype == PLUS) {
         return left->get_value() + right->get_value();
@@ -79,12 +83,10 @@ int Operators::get_value(Lexem *left, Lexem *right) {
     }
 }
 
-
-
 string Variable::get_name() { return this->name; }
 Variable::Variable() { name = nullptr; }
-void Variable::set_value(int value) { this->value = value; }
-int Variable::get_value() const { return value; }
+void Variable::set_value(int value) { var_table[name] = value; }
+int Variable::get_value() const { return var_table[name]; }
 void Variable::print() { cout << name; }
 bool Variable::inlabel_table() {  
     if(lable_table.find(this->get_name()) == lable_table.end()) {
@@ -93,18 +95,20 @@ bool Variable::inlabel_table() {
         return true;
     }
 }
+
 Variable::Variable(string name) {
-    value = 0;
     this->name = name;
 }
 
 Array::Array(Lexem *left, Lexem *right) {
     array_name = left->get_name();
-    el_number = right->get_value();
-    value = array_table[array_name][el_number];
+    element_name = right->get_value();
+}
+
+int Array::get_value() const {
+    return array_table[array_name][element_name];
 }
 
 void Array::set_value(int number) {
-    this->value = number;
-    array_table[array_name][el_number] = value;
+    array_table[array_name][element_name] = number;
 }

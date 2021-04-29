@@ -2,12 +2,15 @@
 #include "const.h"
 Lexem *get_operator(string codeline, int &pos) {
     string subline;
-    for(int op = 0; op < 32; ++op) {
+    for(int op = 0; op < OPER_LEN; ++op) {
         subline = codeline.substr(pos, OPERTEXT[op].size());
         if(OPERTEXT[op] == subline) {
             pos += OPERTEXT[op].size();
+            if(OPERATOR(op) == COMMA) {
+                return nullptr;
+            }
             if(OPERATOR(op) == GOTO || OPERATOR(op) == IF || OPERATOR(op) == ELSE ||
-                OPERATOR(op) == WHILE || OPERATOR(op) == ENDWHILE) {
+                OPERATOR(op) == WHILE || OPERATOR(op) == ENDWHILE || OPERATOR(op) == FUNCTION) {
                 return new Goto(op); 
             } else {
                 return new Operators(op);
@@ -48,14 +51,14 @@ Lexem *scan_variable(string codeline, int &pos) {
     auto search = var_table.find(name);
     if(search == var_table.end()) {
         ptr = new Variable(name);
-        var_table.insert(make_pair(name, ptr));
+        var_table.insert(make_pair(name, 0));
         return ptr;
     } else {
-        return search->second;
+        return new Variable(search->first);
     }
 }
 
-bool empty_char(char empty) {
+bool isempty_char(char empty) {
     if(empty == ' ' || empty == '\t') {
         return true;
     } else {
@@ -63,11 +66,11 @@ bool empty_char(char empty) {
     }
 }
 
-vector <Lexem *> parseLexem(const string &codeline) {
+vector <Lexem *> parse_lexem(const string &codeline) {
     Lexem *lexem;
     vector <Lexem *> parsed;
     for(int pos = 0; pos < codeline.size();) {
-        if(empty_char(codeline[pos])) {
+        if(isempty_char(codeline[pos])) {
             pos++;
         }
         lexem = get_operator(codeline, pos);
@@ -91,7 +94,7 @@ vector <Lexem *> parseLexem(const string &codeline) {
 
 void init_labels(vector <Lexem *> &infix, int row) {
     for(int i = 1; i < infix.size(); ++i) {
-        if(infix[i - 1]->is_variable() && infix[i]->isOperator()) {
+        if(infix[i - 1]->is_variable() && infix[i]->is_operator()) {
             Variable *lexemvar = (Variable *)infix[i - 1];
             Operators *lexemop = (Operators *)infix[i];
             if(lexemop->get_type() == COLON) {
@@ -109,29 +112,40 @@ void init_labels(vector <Lexem *> &infix, int row) {
                     }
                 }
                 i++;
-            }
+            }        
+        }
+        if(infix[i - 1] -> get_type() == FUNCTION) {
+            ((Goto*)infix[i - 1])->set_row(row);
+            fun_table[infix[i]->get_name()].arg_num = infix.size() - i - 3;
+            fun_table[infix[i]->get_name()].row = row;
+            delete infix[i + 1];
+            delete infix[infix.size() - 1];
+            infix.erase(infix.begin() + i);
+            infix.erase(infix.begin() + i);
+            infix.erase(infix.end() - 1);
+            return;
         }
     }
 }
 
 void init_jumps(vector <vector <Lexem *>> &infix_lines) {
-    stack <Goto *> stack_if_else;
+    stack <Goto *> stack_ifelse;
     stack <Goto *> stack_while;
     for(int row = 0; row <  (int)infix_lines.size(); ++row) {
         for(int i = 0; i < (int) infix_lines[row].size(); ++i) {
-            if(infix_lines[row][i]->isOperator()) {
+            if(infix_lines[row][i]->is_operator()) {
                 Operators* lexemoper = (Operators *)infix_lines[row][i];
                 if(lexemoper->get_type() == IF) {
-                    stack_if_else.push((Goto *)lexemoper);
+                    stack_ifelse.push((Goto *)lexemoper);
                 }
                 if(lexemoper->get_type() == ELSE) {
-                    stack_if_else.top()->set_row(row + 1);
-                    stack_if_else.pop();
-                    stack_if_else.push((Goto *)lexemoper);
+                    stack_ifelse.top()->set_row(row + 1);
+                    stack_ifelse.pop();
+                    stack_ifelse.push((Goto *)lexemoper);
                 }
                 if(lexemoper->get_type() == ENDIF) {
-                    stack_if_else.top()->set_row(row + 1);
-                    stack_if_else.pop();
+                    stack_ifelse.top()->set_row(row + 1);
+                    stack_ifelse.pop();
                 }
                 if(lexemoper->get_type() == WHILE) {
                     Goto * lexemgoto = (Goto *)lexemoper ;

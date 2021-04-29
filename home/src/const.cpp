@@ -1,6 +1,9 @@
 #include "const.h"
 
 string OPERTEXT [] = {
+    ",",
+    "return",
+    "function", "endfunction",
     "[", "]", "size",
     "if", "then",
     "else", "endif",
@@ -21,6 +24,8 @@ string OPERTEXT [] = {
     "*", "/", "%"
 };
  int PRIORITY [] = {
+    -5,
+    -6, -5, -5, 
     -1, -1, -4, 
     -3, -3,
     -3, -3,
