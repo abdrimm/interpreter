@@ -116,13 +116,25 @@ void init_labels(vector <Lexem *> &infix, int row) {
         }
         if(infix[i - 1] -> get_type() == FUNCTION) {
             ((Goto*)infix[i - 1])->set_row(row);
-            fun_table[infix[i]->get_name()].arg_num = infix.size() - i - 3;
+            int counter = 0;
+            for(int i = 0 ; i < infix.size(); ++i) {
+                if(infix[i]->get_type() == COMMA) {
+                        counter++;                   
+                }
+            }
+            fun_table[infix[i]->get_name()].arg_num = counter + 1;
+            cout << "arg_num" << fun_table[infix[i]->get_name()].arg_num << endl;
             fun_table[infix[i]->get_name()].row = row;
-            delete infix[i + 1];
-            delete infix[infix.size() - 1];
-            infix.erase(infix.begin() + i);
-            infix.erase(infix.begin() + i);
-            infix.erase(infix.end() - 1);
+            for(int i = 0 ; i < infix.size(); ++i) {
+                if(fun_table.find(infix[i]->get_name()) != fun_table.end()) {
+                    infix.erase(infix.begin() + i); 
+                    i--;
+                }
+                if((infix[i]->get_type() == LBRACKET) || (infix[i]->get_type() == RBRACKET) || (infix[i]->get_type() == COMMA)) {
+                    infix.erase(infix.begin() + i);
+                    i--;
+                }               
+            }
             return;
         }
     }

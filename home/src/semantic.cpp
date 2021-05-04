@@ -1,10 +1,16 @@
 #include "semantic.h"
 
+void right_left_lexems(stack <Lexem*> &evaluation_stack, Lexem* &left, Lexem* &right) {
+    right = evaluation_stack.top();
+    evaluation_stack.pop();
+    left = evaluation_stack.top();
+    evaluation_stack.pop();
+}
+
 int evaluate_postfix(vector <vector <Lexem *>> postfix_lines, int row) {
     int result = 0;
     stack <Lexem*> evaluation_stack;
     vector<Lexem *> postfix = postfix_lines[row];
-    stack<Lexem *> new_Numbers;
     Lexem *left, *right;
     for(int i = 0; i < postfix.size(); ++i) {
         if(postfix[i] == nullptr) {
@@ -25,18 +31,13 @@ int evaluate_postfix(vector <vector <Lexem *>> postfix_lines, int row) {
                     return lexemgoto->get_row();
                 }
             } else if(lexemop->get_type() == SIZE) {
-                right = evaluation_stack.top();
-                evaluation_stack.pop();
-                left = evaluation_stack.top();
-                evaluation_stack.pop();
+                right_left_lexems(evaluation_stack, right, left);
                 array_table[left->get_name()] = new int[right->get_value()];
             } else if(lexemop->get_type() == LSQRBRACKET) {
-                right = evaluation_stack.top();
-                evaluation_stack.pop();
-                left = evaluation_stack.top();
-                evaluation_stack.pop();
+                right_left_lexems(evaluation_stack, right, left);
                 evaluation_stack.push(new Array(left, right));
             } else if(postfix[i]->get_type() == RETURN) {
+                cout << "is return" << endl;
                 if(!evaluation_stack.empty()) {
                     program_stack.push(evaluation_stack.top()->get_value());
                     evaluation_stack.pop();
@@ -50,9 +51,16 @@ int evaluate_postfix(vector <vector <Lexem *>> postfix_lines, int row) {
                     program_stack.pop();
                 }
                 continue;
-            } else if(lexemop->get_type() == LBRACKET) {
-                Lexem *func_name = postfix[i + 1];
-                postfix[i + 1] = nullptr;
+            } else {               
+                if(evaluation_stack.size() >= 2) {
+                    right_left_lexems(evaluation_stack, right, left);
+                    result = postfix[i]->get_value(left, right);
+                    evaluation_stack.push(new Number(result));
+                }
+            }
+        } else {
+            if(fun_table.find(postfix[i]->get_name()) != fun_table.end()) {
+                Lexem *func_name = postfix[i];
                 for(int arg = 0; arg < fun_table[func_name->get_name()].arg_num; arg++) {
                     program_stack.push(evaluation_stack.top()->get_value());
                     evaluation_stack.pop();
@@ -72,22 +80,10 @@ int evaluate_postfix(vector <vector <Lexem *>> postfix_lines, int row) {
                 if(!program_stack.empty()) {
                     evaluation_stack.push(new Number(program_stack.top()));
                     program_stack.pop();
-                    new_Numbers.push(evaluation_stack.top());
                 }
                 continue;
-            } else { 
-                if(evaluation_stack.size() >= 2) {
-                    right = evaluation_stack.top();
-                    evaluation_stack.pop();
-                    left = evaluation_stack.top();
-                    evaluation_stack.pop();
-                    result = postfix[i]->get_value(left, right);
-                    evaluation_stack.push(new Number(result));
-                }
             }
-        } else {
                 evaluation_stack.push(postfix[i]);               
             }
         }
     return row + 1;
-}
