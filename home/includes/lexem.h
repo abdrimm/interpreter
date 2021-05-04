@@ -70,13 +70,13 @@ public:
     Variable(string name);
     bool is_operator() {return false;};
     bool is_variable() {return true;};
+    int get_priority();
     void print();
     int get_value() const;
     void set_value(int value);
     string get_name();
     bool inlabel_table();
 };
-
 
 class Goto : public Operators {
     int row;
